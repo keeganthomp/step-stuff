@@ -1,5 +1,6 @@
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface TokenAmountInputProps {
   image: string;
@@ -23,6 +24,28 @@ const validateAmount = (amount: string): number | null => {
   return isNaN(num) ? null : Number(num);
 };
 
+const PrefixedAmountButton = ({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) => {
+  return (
+    <button
+      className={cn(
+        "px-2 py-1 rounded-md text-gray-600 text-[10px] uppercase text-white bg-gray-400"
+      )}
+      onClick={onPress}
+      disabled={disabled}
+    >
+      {label}
+    </button>
+  );
+};
+
 const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
   image,
   symbol,
@@ -32,6 +55,18 @@ const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
   currentBalance,
 }) => {
   const [inputValue, setInputValue] = useState("");
+
+  const setMax = () => {
+    if (!currentBalance) return;
+    setInputValue(currentBalance?.toString() || "");
+    onChange(Number(currentBalance));
+  };
+
+  const setHalf = () => {
+    if (!currentBalance) return;
+    setInputValue((Number(currentBalance) / 2).toString() || "");
+    onChange(Number(currentBalance) / 2);
+  };
 
   useEffect(() => {
     if (value === null || value === 0) {
@@ -68,7 +103,19 @@ const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
   const isBeyondMax = Number(inputValue || 0) > Number(currentBalance || 0);
 
   return (
-    <>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-end gap-1">
+        <PrefixedAmountButton
+          label="Half"
+          onPress={setHalf}
+          disabled={disabled}
+        />
+        <PrefixedAmountButton
+          label="Max"
+          onPress={setMax}
+          disabled={disabled}
+        />
+      </div>
       <div className="flex items-center justify-between bg-gray-200 px-5 py-4 relative rounded-lg gap-2">
         <Image
           src={image}
@@ -91,7 +138,7 @@ const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
           Your balance is only {currentBalance}
         </p>
       )}
-    </>
+    </div>
   );
 };
 
