@@ -29,10 +29,8 @@ function RootLayout({
   return (
     <html lang="en" className={robotoMono.className}>
       <body className="bg-[#fafafa]">
-        <div className="min-h-screen">
-          <Header />
-          <main className="min-h-screen">{children}</main>
-        </div>
+        <Header />
+        <main className="px-4">{children}</main>
         <Toaster />
       </body>
     </html>

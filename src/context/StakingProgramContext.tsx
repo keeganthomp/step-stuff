@@ -1,24 +1,23 @@
 "use client";
 
 import React, { createContext, useContext, ReactNode } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
 import {
-  Transaction,
-  TransactionMessage,
-  VersionedTransaction,
-} from "@solana/web3.js";
+  useAnchorWallet,
+  useConnection,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
+import { Transaction } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 import { programId } from "@/lib/program";
 import { STEP_TOKEN_MINT, XSTEP_TOKEN_MINT } from "@/constants";
 import { getStakingProgram } from "@/lib/program";
 import { makeCreateAtaInstruction, doesAtaExist } from "@/utils/solana";
 
-const priceAccount = anchor.web3.Keypair.generate();
-
 interface StakingProgramContextType {
   stake: (amount: number) => Promise<string>;
   unstake: (amount: number) => Promise<string>;
+  getStepTokPrice: () => Promise<{ stepPerXstep: number | null } | null>;
 }
 
 const StakingProgramContext = createContext<
@@ -55,9 +54,10 @@ export const StakingProgramProvider: React.FC<StakingProgramProviderProps> = ({
 }) => {
   const { connection } = useConnection();
   const { sendTransaction, publicKey: connectedWallet } = useWallet();
+  const anchorWallet = useAnchorWallet();
 
   const stake = async (amount: number) => {
-    if (!connectedWallet) {
+    if (!connectedWallet || !anchorWallet) {
       throw new Error("No wallet connected");
     }
     const stakingTxn = new Transaction();
@@ -85,7 +85,7 @@ export const StakingProgramProvider: React.FC<StakingProgramProviderProps> = ({
       stakingTxn.add(createXStepAtaIx);
     }
     // get the staking program and vault info
-    const stakingProgram = getStakingProgram(connection);
+    const stakingProgram = getStakingProgram(connection, anchorWallet);
     const [vaultPublicKey, vaultBump] = await getVaultInfo();
     // convert the amount to a BN
     const amountBN = new anchor.BN(amount);
@@ -113,7 +113,7 @@ export const StakingProgramProvider: React.FC<StakingProgramProviderProps> = ({
   };
 
   const unstake = async (amount: number) => {
-    if (!connectedWallet) {
+    if (!connectedWallet || !anchorWallet) {
       throw new Error("No wallet connected");
     }
     const unstakeTxn = new Transaction();
@@ -141,7 +141,7 @@ export const StakingProgramProvider: React.FC<StakingProgramProviderProps> = ({
       unstakeTxn.add(createStepAtaIx);
     }
     // get the staking program and vault info
-    const stakingProgram = getStakingProgram(connection);
+    const stakingProgram = getStakingProgram(connection, anchorWallet);
     const [vaultPublicKey, vaultBump] = await getVaultInfo();
     // convert the amount to a BN
     const amountBN = new anchor.BN(amount);
@@ -168,8 +168,35 @@ export const StakingProgramProvider: React.FC<StakingProgramProviderProps> = ({
     return txnSig;
   };
 
+  const getStepTokPrice = async () => {
+    if (!connectedWallet || !anchorWallet) {
+      throw new Error("No wallet connected");
+    }
+
+    const stakingProgram = getStakingProgram(connection, anchorWallet);
+    const [vaultPublicKey] = await getVaultInfo();
+    // get price by simulating the emitPrice func
+    const priceRes = await stakingProgram.simulate.emitPrice({
+      accounts: {
+        tokenMint: stepMint,
+        xTokenMint: xStepMint,
+        tokenVault: vaultPublicKey,
+      },
+    });
+    const priceData = priceRes?.events[0].data;
+    const rawXStepPrice = priceData?.stepPerXstep?.toString();
+
+    const isXStepPriceNumber = !isNaN(Number(rawXStepPrice));
+
+    const formattedXStepPrice = isXStepPriceNumber
+      ? Number(rawXStepPrice)
+      : null;
+
+    return { stepPerXstep: formattedXStepPrice };
+  };
+
   return (
-    <StakingProgramContext.Provider value={{ stake, unstake }}>
+    <StakingProgramContext.Provider value={{ stake, unstake, getStepTokPrice }}>
       {children}
     </StakingProgramContext.Provider>
   );

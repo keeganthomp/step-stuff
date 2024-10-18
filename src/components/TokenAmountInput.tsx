@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 
 interface TokenAmountInputProps {
   image: string;
+  disabled?: boolean;
+  symbol?: string;
   onChange: (amount: number) => void;
   value: number | null;
   currentBalance?: number | null | string;
@@ -23,6 +25,8 @@ const validateAmount = (amount: string): number | null => {
 
 const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
   image,
+  symbol,
+  disabled,
   onChange,
   value,
   currentBalance,
@@ -65,16 +69,18 @@ const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
 
   return (
     <>
-      <div className="flex items-center gap-2 bg-gray-100 p-4 relative rounded-lg">
+      <div className="flex items-center justify-between bg-gray-200 px-5 py-4 relative rounded-lg gap-2">
         <Image
           src={image}
           alt="token-logo"
           width={TOKEN_IMAGE_SIZE}
           height={TOKEN_IMAGE_SIZE}
         />
+        {symbol && <p className="text-gray-600 text-sm">{symbol}</p>}
         <input
           type="text"
-          className="border-0 rounded px-2 py-1 text-right focus:outline-none focus:ring-0 bg-transparent text-xl"
+          disabled={disabled}
+          className="border-0 rounded text-right focus:outline-none focus:ring-0 bg-transparent text-2xl w-full"
           onChange={handleChange}
           value={inputValue}
           placeholder={`0.${"0".repeat(DEFAULT_MAX_DECIMALS)}`}
@@ -82,7 +88,7 @@ const TokenAmountInput: React.FC<TokenAmountInputProps> = ({
       </div>
       {isBeyondMax && (
         <p className="text-red-500 text-xs text-center">
-          Your balance is {currentBalance}
+          Your balance is only {currentBalance}
         </p>
       )}
     </>

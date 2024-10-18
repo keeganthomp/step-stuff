@@ -12,7 +12,7 @@ function Header() {
 
 export default function HeaderWrapper() {
   return (
-    <div className="w-full fixed top-0 left-0 right-0 z-10 h-14">
+    <div className="w-full fixed top-0 left-0 right-0 z-10 h-14 bg-white shadow-sm">
       <Header />
     </div>
   );
